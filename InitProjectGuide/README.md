@@ -30,6 +30,8 @@ Edit `tsconfig.json`
   //...
 ```
 
+---
+
 ```sh
 touch .env
 ```
