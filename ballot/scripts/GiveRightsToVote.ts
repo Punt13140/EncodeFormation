@@ -9,20 +9,12 @@ async function main() {
   if (!parameters || parameters.length < 2)
     throw new Error("Parameters not provided");
   const contractAddress = parameters[0];
-  const proposalNumber = parameters[1];
+  const addressGiveRights = parameters[1];
 
   // Configuring the provider
   const provider = new ethers.JsonRpcProvider(
     process.env.RPC_ENDPOINT_URL ?? ""
   );
-  //const lastBlock = await provider.getBlock("latest");
-  //const lastBlockTimestamp = lastBlock?.timestamp ?? 0;
-  //const lastBlockDate = new Date(lastBlockTimestamp * 1000);
-  //console.log("provider: ", provider._getAddress);
-  //console.log(`Last block number: ${lastBlock?.number}`);
-  //console.log(
-  //  `Last block timestamp: ${lastBlockTimestamp} (${lastBlockDate.toLocaleDateString()} ${lastBlockDate.toLocaleTimeString()})`
-  //);
 
   // Configuring the wallet
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY ?? "", provider);
@@ -36,7 +28,7 @@ async function main() {
   // Attaching to the contract
   const ballotFactory = new Ballot__factory(wallet);
   const ballotContract = ballotFactory.attach(contractAddress) as Ballot;
-  const tx = await ballotContract.vote(proposalNumber);
+  const tx = await ballotContract.giveRightToVote(addressGiveRights);
   const receipt = await tx.wait();
   console.log(`Transaction completed ${receipt?.hash}`);
 }
