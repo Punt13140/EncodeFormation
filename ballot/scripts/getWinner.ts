@@ -6,7 +6,7 @@ dotenv.config();
 async function main() {
   // Receive parameters from command line
   const parameters = process.argv.slice(2);
-  if (!parameters || parameters.length < 2)
+  if (!parameters || parameters.length < 1)
     throw new Error("Parameters not provided");
   const contractAddress = parameters[0];
 
