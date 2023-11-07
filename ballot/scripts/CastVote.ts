@@ -36,7 +36,7 @@ async function main() {
   // Attaching to the contract
   const ballotFactory = new Ballot__factory(wallet);
   const ballotContract = ballotFactory.attach(contractAddress) as Ballot;
-  const tx = await ballotContract.vote(proposalNumber);
+  const tx = await ballotContract.vote(proposalNumber, { gasLimit: 1000000 });
   const receipt = await tx.wait();
   console.log(`Transaction completed ${receipt?.hash}`);
 }
