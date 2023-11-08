@@ -3,9 +3,9 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { MyNFT, MyToken } from "../typechain-types/contracts";
 
-const TEST_RATIO = 10;
-const TEST_PRICE = 1;
-const TEST_BUY_VALUE = 10;
+const TEST_RATIO = 10n;
+const TEST_PRICE = 1n;
+const TEST_BUY_VALUE = ethers.parseUnits("10"); // trying to buy 10 ETH worth of tokens
 
 describe("NFT Shop", async () => {
   async function deployContracts() {
@@ -43,6 +43,89 @@ describe("NFT Shop", async () => {
     await roleNftTx.wait();
 
     return { accounts, tokenSaleContract, myTokenContract, myNFTContract };
+  }
+  async function buyTokens() {
+    const { accounts, tokenSaleContract, myTokenContract, myNFTContract } =
+      await loadFixture(deployContracts);
+    const buyer = accounts[1];
+    const initialBalance = await buyer.provider.getBalance(buyer.address);
+    const tx = await tokenSaleContract
+      .connect(buyer)
+      .buyTokens({ value: TEST_BUY_VALUE });
+    const txReceipt = await tx.wait();
+    const gasUsed = txReceipt?.gasUsed ?? 0n;
+    const gasPrice = txReceipt?.gasPrice ?? 0n;
+    const gasCost = gasUsed * gasPrice;
+    const finalBalance = await buyer.provider.getBalance(buyer.address);
+    return {
+      accounts,
+      tokenSaleContract,
+      myTokenContract,
+      myNFTContract,
+      txReceipt,
+      buyer,
+      initialBalance,
+      finalBalance,
+      gasCost,
+    };
+  }
+  async function burnTokens() {
+    const { buyer, accounts, tokenSaleContract, myTokenContract } =
+      await loadFixture(buyTokens);
+    const expectedBalance = TEST_BUY_VALUE * TEST_RATIO;
+    const ethBalanceBefore = await ethers.provider.getBalance(buyer.address);
+    const allowTx = await myTokenContract
+      .connect(buyer)
+      .approve(tokenSaleContract.target, expectedBalance);
+    const allowTxReceipt = await allowTx.wait();
+    const allowTxGasUsed = allowTxReceipt?.gasUsed ?? 0n;
+    const allowTxPricePerGas = allowTxReceipt?.gasPrice ?? 0n;
+    const allowTxGasCosts = allowTxGasUsed * allowTxPricePerGas;
+    const burnTx = await tokenSaleContract
+      .connect(buyer)
+      .returnTokens(expectedBalance);
+    await burnTx.wait();
+    const burnTxReceipt = await burnTx.wait();
+    const burnTxGasUsed = burnTxReceipt?.gasUsed ?? 0n;
+    const burnTxPricePerGas = burnTxReceipt?.gasPrice ?? 0n;
+    const burnTxGasCosts = burnTxGasUsed * burnTxPricePerGas;
+    const ethBalanceAfter = await ethers.provider.getBalance(buyer.address);
+    const gasCosts = allowTxGasCosts + burnTxGasCosts;
+    return {
+      buyer,
+      accounts,
+      tokenSaleContract,
+      myTokenContract,
+      ethBalanceBefore,
+      gasCosts,
+      ethBalanceAfter,
+    };
+  }
+  async function buyNft() {
+    const {
+      buyer,
+      accounts,
+      tokenSaleContract,
+      myTokenContract,
+      myNFTContract,
+    } = await loadFixture(buyTokens);
+    const allowTx = await myTokenContract
+      .connect(buyer)
+      .approve(tokenSaleContract.target, TEST_PRICE);
+    await allowTx.wait();
+
+    const nftId = 0;
+    const txReceipt = await tokenSaleContract.connect(buyer).buyNFT(nftId);
+    await txReceipt.wait();
+    return {
+      buyer,
+      accounts,
+      tokenSaleContract,
+      myTokenContract,
+      myNFTContract,
+      txReceipt,
+      nftId,
+    };
   }
 
   describe("When the Shop contract is deployed", async () => {
@@ -88,50 +171,37 @@ describe("NFT Shop", async () => {
     });
   });
   describe("When a user buys an ERC20 from the Token contract", async () => {
-    async function buyTokens() {
-      const { accounts, tokenSaleContract, myTokenContract, myNFTContract } =
-        await loadFixture(deployContracts);
-      const buyer = accounts[1];
-      const initialBalance = await buyer.provider.getBalance(buyer.address);
-      const tx = await tokenSaleContract
-        .connect(buyer)
-        .buyTokens({ value: TEST_BUY_VALUE });
-      const txReceipt = await tx.wait();
-      const finalBalance = await buyer.provider.getBalance(buyer.address);
-      return {
-        accounts,
-        tokenSaleContract,
-        myTokenContract,
-        myNFTContract,
-        txReceipt,
-        buyer,
-        initialBalance,
-        finalBalance,
-      };
-    }
-
     it("charges the correct amount of ETH", async () => {
-      throw new Error("Not implemented");
+      const { initialBalance, finalBalance, gasCost } = await loadFixture(
+        buyTokens
+      );
+      const diff = initialBalance - finalBalance;
+      const expectedDiff = TEST_BUY_VALUE + gasCost;
+      const error = diff - expectedDiff;
+
+      expect(error).to.eq(0);
     });
     it("gives the correct amount of tokens", async () => {
-      const {
-        accounts,
-        tokenSaleContract,
-        myTokenContract,
-        myNFTContract,
-        buyer,
-      } = await loadFixture(buyTokens);
-
+      const { myTokenContract, buyer } = await loadFixture(buyTokens);
       const balance = await myTokenContract.balanceOf(buyer.address);
+
       expect(balance).to.eq(TEST_BUY_VALUE * TEST_RATIO);
     });
   });
   describe("When a user burns an ERC20 at the Shop contract", async () => {
     it("gives the correct amount of ETH", async () => {
-      throw new Error("Not implemented");
+      const { ethBalanceBefore, ethBalanceAfter, gasCosts } = await loadFixture(
+        burnTokens
+      );
+      const diff = ethBalanceAfter - ethBalanceBefore;
+      const expectDiff = TEST_BUY_VALUE - gasCosts;
+      const error = diff - expectDiff;
+      expect(error).to.eq(0);
     });
     it("burns the correct amount of tokens", async () => {
-      throw new Error("Not implemented");
+      const { buyer, myTokenContract } = await loadFixture(burnTokens);
+      const balanceAfterBurn = await myTokenContract.balanceOf(buyer.address);
+      expect(balanceAfterBurn).to.eq(0);
     });
   });
   describe("When a user buys an NFT from the Shop contract", async () => {
@@ -139,7 +209,9 @@ describe("NFT Shop", async () => {
       throw new Error("Not implemented");
     });
     it("gives the correct NFT", async () => {
-      throw new Error("Not implemented");
+      const { buyer, nftId, myNFTContract } = await loadFixture(buyNft);
+      const nftOwner = await myNFTContract.ownerOf(nftId);
+      expect(nftOwner).to.eq(buyer.address);
     });
   });
   describe("When a user burns their NFT at the Shop contract", async () => {
