@@ -9,6 +9,7 @@ async function main() {
   if (!parameters || parameters.length < 2)
     throw new Error("Parameters not provided");
   const contractAddress = parameters[0];
+  const giveTo = parameters[1];
 
   // Configuring the provider
   const provider = new ethers.JsonRpcProvider(

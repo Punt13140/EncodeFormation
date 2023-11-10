@@ -1,20 +1,13 @@
 import { ethers } from "hardhat";
 import * as dotenv from "dotenv";
-import { TokenizedBallot__factory } from "../typechain-types";
+import { MyToken__factory, TokenizedBallot__factory } from "../typechain-types";
 dotenv.config();
 
 async function main() {
-  // Receive parameters from command line
-  const proposals = process.argv.slice(2);
-  if (!proposals || proposals.length < 1) {
-    throw new Error("Proposals not provided");
-  }
-
   // Configuring the provider
   const provider = new ethers.JsonRpcProvider(
     process.env.RPC_ENDPOINT_URL ?? ""
   );
-  console.log("provider: ", provider._getAddress);
   const lastBlock = await provider.getBlock("latest");
   console.log(`Last block number: ${lastBlock?.number}`);
   const lastBlockTimestamp = lastBlock?.timestamp ?? 0;
@@ -34,9 +27,13 @@ async function main() {
   }
 
   // TODO Deploy the token contract
+  const ballotFactory = new MyToken__factory(wallet);
+  const ballotContract = await ballotFactory.deploy();
+  await ballotContract.waitForDeployment();
+  console.log(`Contract deployed to ${ballotContract.target}`);
 
   // Deploy the ballot contract
-  const ballotFactory = new TokenizedBallot__factory(wallet);
+  //const ballotFactory = new TokenizedBallot__factory(wallet);
   /* const ballotContract = await ballotFactory.deploy(
     proposals.map(ethers.encodeBytes32String)
   );
