@@ -31,19 +31,6 @@ async function main() {
   const ballotContract = await ballotFactory.deploy();
   await ballotContract.waitForDeployment();
   console.log(`Contract deployed to ${ballotContract.target}`);
-
-  // Deploy the ballot contract
-  //const ballotFactory = new TokenizedBallot__factory(wallet);
-  /* const ballotContract = await ballotFactory.deploy(
-    proposals.map(ethers.encodeBytes32String)
-  );
-  await ballotContract.waitForDeployment();
-  console.log(`Contract deployed to ${ballotContract.target}`);
-  for (let index = 0; index < proposals.length; index++) {
-    const proposal = await ballotContract.proposals(index);
-    const name = ethers.decodeBytes32String(proposal.name);
-    console.log({ index, name, proposal });
-  } */
 }
 
 main().catch((error) => {

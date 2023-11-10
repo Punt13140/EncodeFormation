@@ -1,20 +1,28 @@
 import { ethers } from "hardhat";
 import * as dotenv from "dotenv";
-import { MyToken__factory, TokenizedBallot__factory } from "../typechain-types";
+import {
+  MyToken,
+  MyToken__factory,
+  TokenizedBallot__factory,
+} from "../typechain-types";
 dotenv.config();
 
 async function main() {
+  const parameters = process.argv.slice(2);
+  console.log({ parameters });
+  if (!parameters || parameters.length < 4)
+    throw new Error("Parameters not provided");
+
+  const tokenContractAddress = parameters[0];
+  const blockNumber = Number(parameters[1]);
+  const proposals = parameters.slice(2);
+
   // Configuring the provider
   const provider = new ethers.JsonRpcProvider(
     process.env.RPC_ENDPOINT_URL ?? ""
   );
   const lastBlock = await provider.getBlock("latest");
   console.log(`Last block number: ${lastBlock?.number}`);
-  const lastBlockTimestamp = lastBlock?.timestamp ?? 0;
-  const lastBlockDate = new Date(lastBlockTimestamp * 1000);
-  console.log(
-    `Last block timestamp: ${lastBlockTimestamp} (${lastBlockDate.toLocaleDateString()} ${lastBlockDate.toLocaleTimeString()})`
-  );
 
   // Configuring the wallet
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY ?? "", provider);
@@ -26,9 +34,25 @@ async function main() {
     throw new Error("Not enough ether");
   }
 
+  // Check if the token contract is deployed/exists
+  const tokenFactory = new MyToken__factory(wallet);
+  const tokenContract = tokenFactory.attach(tokenContractAddress) as MyToken;
+  try {
+    const name = await tokenContract.name();
+    console.log(`Token name: ${name}`);
+    const symbol = await tokenContract.symbol();
+    console.log(`Token symbol: ${symbol}`);
+  } catch (error) {
+    throw new Error(`Token contract not deployed at ${tokenContractAddress}`);
+  }
+
   // TODO Deploy the token contract
-  const ballotFactory = new MyToken__factory(wallet);
-  const ballotContract = await ballotFactory.deploy();
+  const ballotFactory = new TokenizedBallot__factory(wallet);
+  const ballotContract = await ballotFactory.deploy(
+    proposals.map(ethers.encodeBytes32String),
+    tokenContractAddress,
+    blockNumber
+  );
   await ballotContract.waitForDeployment();
   console.log(`Contract deployed to ${ballotContract.target}`);
 
