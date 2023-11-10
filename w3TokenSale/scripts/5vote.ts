@@ -6,9 +6,11 @@ dotenv.config();
 async function main() {
   // Receive parameters from command line
   const parameters = process.argv.slice(2);
-  if (!parameters || parameters.length < 2)
+  if (!parameters || parameters.length < 3)
     throw new Error("Parameters not provided");
   const contractAddress = parameters[0];
+  const proposalNumber = parameters[1];
+  const amount = parameters[2];
 
   // Configuring the provider
   const provider = new ethers.JsonRpcProvider(
@@ -30,7 +32,15 @@ async function main() {
     contractAddress
   ) as TokenizedBallot;
 
-  // TODO
+  const tx = await ballotContract.vote(
+    proposalNumber,
+    ethers.parseUnits(amount),
+    {
+      gasLimit: 1000000,
+    }
+  );
+  const receipt = await tx.wait();
+  console.log(`Transaction completed ${receipt?.hash}`);
 }
 
 main().catch((error) => {

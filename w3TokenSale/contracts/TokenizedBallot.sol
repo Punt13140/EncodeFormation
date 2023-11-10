@@ -35,6 +35,7 @@ contract TokenizedBallot {
             votingPower(msg.sender) >= amount,
             "TokenizedBallot: trying to vote more than allowed"
         );
+        // require votingPower > 0 ?
         proposals[proposal].voteCount += amount;
     }
 
