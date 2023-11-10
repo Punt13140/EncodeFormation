@@ -30,7 +30,8 @@ async function main() {
     contractAddress
   ) as TokenizedBallot;
 
-  // TODO
+  const winner = await ballotContract.winnerName();
+  console.log(`Winner is ${ethers.decodeBytes32String(winner)}`);
 }
 
 main().catch((error) => {
