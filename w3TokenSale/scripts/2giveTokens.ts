@@ -6,10 +6,11 @@ dotenv.config();
 async function main() {
   // Receive parameters from command line
   const parameters = process.argv.slice(2);
-  if (!parameters || parameters.length < 2)
+  if (!parameters || parameters.length < 3)
     throw new Error("Parameters not provided");
   const contractAddress = parameters[0];
   const giveTo = parameters[1];
+  const amount = parameters[2];
 
   // Configuring the provider
   const provider = new ethers.JsonRpcProvider(
@@ -26,10 +27,27 @@ async function main() {
   }
 
   // Attaching to the contract
-  const ballotFactory = new MyToken__factory(wallet);
-  const ballotContract = ballotFactory.attach(contractAddress) as MyToken;
+  const tokenFactory = new MyToken__factory(wallet);
+  const tokenContract = tokenFactory.attach(contractAddress) as MyToken;
 
-  // TODO
+  const mintTx = await tokenContract.mint(giveTo, ethers.parseUnits(amount));
+  await mintTx.wait();
+  console.log(`Minted ${amount} tokens to ${giveTo}`);
+
+  const [name, symbol, decimals, totalSupply] = await Promise.all([
+    tokenContract.name(),
+    tokenContract.symbol(),
+    tokenContract.decimals(),
+    tokenContract.totalSupply(),
+  ]);
+  console.log({ name, symbol, decimals, totalSupply });
+
+  const balanceGiveTo = await tokenContract.balanceOf(giveTo);
+  console.log(
+    `Balance of ${giveTo} is now ${ethers.formatUnits(
+      balanceGiveTo
+    )} ${symbol} units`
+  );
 }
 
 main().catch((error) => {
