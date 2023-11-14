@@ -1,0 +1,15 @@
+<body>
+  <h1>Hello World</h1>
+  <p>This is a test</p>
+  <p>This is a random number:</p>
+  <p id="random-number">Loading...</p>
+  <script>
+    setInterval(function () {
+      var x = Math.floor(Math.random() * 100);
+      document.getElementById("random-number").innerHTML = x;
+    }, 2000);
+  </script>
+  <script>
+    console.log("Hello World");
+  </script>
+</body>
