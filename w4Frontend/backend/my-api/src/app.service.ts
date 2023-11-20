@@ -45,16 +45,20 @@ export class AppService {
   }
 
   async getTransactionReceipt(hash: string) {
-    throw new Error('Method not implemented.');
+    throw await this.provider.getTransactionReceipt(hash);
   }
 
   getServerWalletAddress() {
-    throw new Error('Method not implemented.');
+    return this.wallet.address;
   }
+
   async checkMinterRole(address: string) {
-    throw new Error('Method not implemented.');
+    const MINTER_ROLE =
+      '0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6';
+    return await this.contract.hasRole(MINTER_ROLE, address);
   }
-  async mintTokens(address: any) {
-    throw new Error('Method not implemented.');
+
+  async mintTokens(address: any, sig: string) {
+    return sig === '123';
   }
 }
